@@ -57,15 +57,15 @@ Library
   Other-modules:     Internal.PCSCLite
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
-  Include-Dirs:      /usr/include/PCSC 
-  Includes:          pcsclite.h winscard.h
+  Include-Dirs:      include
+  Includes:          pcsclite_patched.h winscard.h
   Build-tools:       c2hs        
   Extra-Libraries:   pcsclite
   
 Executable test
   Main-Is:           Test.hs
-  Include-Dirs:      /usr/include/PCSC 
-  Includes:          pcsclite.h winscard.h
+  Include-Dirs:      include
+  Includes:          pcsclite_patched.h winscard.h
   Extra-Libraries:   pcsclite
   Build-depends:     base
   Other-modules:     Internal.WinSCard Internal.PCSCLite
