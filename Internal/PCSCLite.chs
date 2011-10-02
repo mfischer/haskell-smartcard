@@ -13,7 +13,10 @@ import Foreign.C
 data SCardError = SCardError {unSCardError :: Int}
 
 instance Show SCardError where
-	show = errorToString
+  show = errorToString
+
+instance Eq SCardError where
+  (==) a b = unSCardError a == unSCardError b
 
 toSCardError :: CLong -> SCardError
 toSCardError e = SCardError {unSCardError = fromIntegral e}
@@ -31,4 +34,4 @@ enum define SCardScope { SCARD_SCOPE_USER as UserScope
 #}
 
 
-
+type SCardContext = {#type SCARDCONTEXT#}

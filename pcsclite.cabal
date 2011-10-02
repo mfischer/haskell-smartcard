@@ -48,12 +48,13 @@ Cabal-version:       >=1.2
 Library
   -- Modules exported by the library.
   -- Exposed-modules:     
+  Exposed-modules:   Internal.WinSCard
   
   -- Packages needed in order to build this package.
-  Build-depends:     base
+  Build-depends:     base, MissingH
   
   -- Modules not exported by this package.
-  Other-modules:     Internal.PCSCLite Internal.WinSCard
+  Other-modules:     Internal.PCSCLite
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Include-Dirs:      /usr/include/PCSC 
@@ -61,3 +62,10 @@ Library
   Build-tools:       c2hs        
   Extra-Libraries:   pcsclite
   
+Executable test
+  Main-Is:           Test.hs
+  Include-Dirs:      /usr/include/PCSC 
+  Includes:          pcsclite.h winscard.h
+  Extra-Libraries:   pcsclite
+  Build-depends:     base
+  Other-modules:     Internal.WinSCard Internal.PCSCLite
