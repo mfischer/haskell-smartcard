@@ -3,27 +3,30 @@ module Internal.WinSCard ( establishContext
                          , releaseContext
                          , validateContext
                          , listReaders
-                         , connect )
+                         , transmit
+                         , connect
+                         , disconnect
+                         , reconnect
+                         , beginTransaction
+                         , endTransaction )
 where
 
 import Foreign
 import Foreign.C
 import Foreign.C.String
 import Internal.PCSCLite
+import Data.List
 import Data.List.Utils
 import Data.Bits
+import Data.ByteString hiding (filter, null, foldr, length, putStrLn)
 import Control.Monad
 
 #include <winscard.h>
 
-establishContext_ :: CULong -> Ptr () -> Ptr () -> Ptr CLong -> IO CLong
-establishContext_ = {#call SCardEstablishContext as ^#}
-
-
 -- | The 'establishContext' function needs to be invoked first when talking to the pcscd.
 establishContext :: SCardScope -> IO (Either SCardStatus SCardContext)
 establishContext s = alloca $ \ctx_ptr ->
-                        do rt  <- liftM fromCLong $ establishContext_ (fromIntegral(fromEnum s)) nullPtr nullPtr ctx_ptr
+                        do rt  <- liftM fromCLong $ {#call SCardEstablishContext as ^#} (fromIntegral(fromEnum s)) nullPtr nullPtr ctx_ptr
                            ctx <- peek ctx_ptr
                            if rt == Ok then return $Right ctx
                                        else return $Left rt
@@ -71,3 +74,69 @@ connect c r s ps = let connect_ = {#call SCardConnect as ^#}
                                h' <- peek h
                                if (rt == Ok) then return $Right (p', h')
                                              else return $Left  rt
+
+
+-- | 'reconnect' reconnects a lost connection, using a SCardAction.
+reconnect:: SCardHandle -> SCardShare -> [SCardProtocol] -> SCardAction-> IO (Either SCardStatus SCardProtocol)
+reconnect h s ps a = let reconnect_ = {#call SCardReconnect as ^#}
+                     in alloca $ \p ->
+                           do rt <- liftM fromCLong $ reconnect_ h (fromIntegral $ fromEnum s) (combine ps) (fromIntegral $ fromEnum a) p
+                              p' <- liftM toSCardProtocol $ peek p
+                              if (rt == Ok) then return $Right p' 
+                                            else return $Left rt
+
+-- | 'disconnect' disconnects a connection, using the specified SCardAction
+disconnect :: SCardHandle -> SCardAction -> IO (SCardStatus)
+disconnect h a = let disconnect_ = {#call SCardDisconnect as ^ #}
+                 in  liftM fromCLong $ disconnect_ h (fromIntegral $ fromEnum a)
+
+-- |
+beginTransaction :: SCardHandle -> IO (SCardStatus)
+beginTransaction h = liftM fromCLong $ {#call SCardBeginTransaction as ^#} h
+
+-- |
+endTransaction :: SCardHandle -> SCardAction -> IO (SCardStatus)
+endTransaction h a = let end_ = {#call SCardDisconnect as ^ #}
+                     in  liftM fromCLong $ end_ h (fromIntegral $ fromEnum a)
+
+-- |
+cancel :: SCardHandle -> IO (SCardStatus)
+cancel h = liftM fromCLong $ {#call SCardCancel as ^ #} h
+
+{--
+control :: SCardHandle -> [Word8] -> Int -> Int -> IO (Either SCardStatus String)
+control h s op len = let control_ = {#call SCardControl as ^ #}
+                     in useAsCStringLen (pack s) $ \(sb,l) -> allocaArray len $ \r ->
+                          alloca $ \l' ->
+                            do rt   <- liftM fromCLong $ control_ h (fromIntegral op) (castPtr sb) (fromIntegral l) r len l'
+                               len' <- peek l'
+                               res  <- peekArray len'
+                               if (rt == Ok) then return $Right res
+                                             else return $Left rt
+--}
+
+
+
+-- | 'transmit' sends an APDU to the smartcard / RFID tag connected to by 'connect'
+transmit :: SCardHandle -> [Word8] -> Int -> SCardProtocol -> IO (Either SCardStatus [Word8])
+transmit h d lr p = allocaArray (length d) $ \sb ->
+                      allocaArray lr $ \rb ->
+                         alloca $ \lo ->
+                           alloca $ \pci -> do poke pci mkSCardIORequestTO
+                                               poke lo $fromIntegral lr
+                                               pokeArray sb d
+                                               rt <- transmit_ (fromCLong h) (castPtr pci) (castPtr (sb :: Ptr Word8)) ((fromIntegral . length) d) (castPtr pci) (rb :: Ptr Word8) lo
+                                               len <- peek lo
+                                               res <- peekArray (fromIntegral len) rb
+                                               if (rt == Ok) then return $Right res
+                                                             else return $Left rt
+
+
+transmit_ = {#fun SCardTransmit as ^{ `Int'
+                                    , castPtr `Ptr SCardIORequest'
+                                    , castPtr `Ptr Word8'
+                                    , fromIntegral `Int'
+                                    , castPtr `Ptr SCardIORequest'
+                                    , castPtr `Ptr Word8'
+                                    , castPtr `Ptr CULong'
+                                    } -> `SCardStatus' fromCLong#}

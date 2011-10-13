@@ -51,7 +51,7 @@ Library
   Exposed-modules:   Internal.WinSCard
   
   -- Packages needed in order to build this package.
-  Build-depends:     base, MissingH
+  Build-depends:     base, MissingH, bytestring
   
   -- Modules not exported by this package.
   Other-modules:     Internal.PCSCLite

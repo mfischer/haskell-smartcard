@@ -6,22 +6,34 @@ module Internal.PCSCLite ( statusToString
                          , SCardProtocol (..)
                          , SCardScope (..)
                          , SCardContext
+                         , SCardAction (..)
                          , fromCLong
-                         , toSCardProtocol)
+                         , SCardIORequest
+                         , toSCardProtocol
+                         , mkSCardIORequestTO
+                         , mkSCardIORequestT1
+                         , mkSCardIORequestRaw)
 where
 
 
 import Data.Int
 import Foreign
 import Foreign.C
+import Foreign.Storable
+import Control.Monad
+import Control.Applicative
 
 #include <pcsclite_patched.h>
 
 
 statusToString :: SCardStatus -> String
+{--
 statusToString s = unsafePerformIO $ do r  <- {#call pcsc_stringify_error as ^#} (fromIntegral $ fromEnum s)
-                                        r' <- peekCString r
-                                        return r'
+                                        peekCString r
+--}
+
+statusToString s = unsafePerformIO $
+                   {#call pcsc_stringify_error as ^#} (fromIntegral $ fromEnum s) >>= peekCString
 
 -- StatusType
 {#enum define SCardStatus { SCARD_S_SUCCESS             as Ok
@@ -127,3 +139,32 @@ instance Show SCardProtocol where
   show T15       = "T15"
   show Raw       = "Raw"
   show Undefined = "Undefined"
+
+{#
+enum define SCardAction { SCARD_LEAVE_CARD   as LeaveCard
+                        , SCARD_RESET_CARD   as ResetCard
+                        , SCARD_UNPOWER_CARD as UnpowerCard
+                        , SCARD_EJECT_CARD   as EjectCard}
+#}
+
+mkSCardIORequestTO  = SCardIORequest { getProtocol = T0
+                                     , getSize = {#sizeof SCARD_IO_REQUEST#}}
+
+mkSCardIORequestT1  = SCardIORequest { getProtocol = T1
+                                     , getSize = {#sizeof SCARD_IO_REQUEST#}}
+
+mkSCardIORequestRaw = SCardIORequest { getProtocol = Raw
+                                     , getSize = {#sizeof SCARD_IO_REQUEST#}}
+
+data SCardIORequest = SCardIORequest { getProtocol :: SCardProtocol
+                                     , getSize     :: Int}
+
+instance Storable SCardIORequest where
+  sizeOf    _ = {#sizeof SCARD_IO_REQUEST #}
+  alignment _ = {#alignof SCARD_IO_REQUEST#}
+  peek p = SCardIORequest
+       <$> liftM toSCardProtocol ({#get SCARD_IO_REQUEST->dwProtocol #} p)
+       <*> liftM fromIntegral    ({#get SCARD_IO_REQUEST->cbPciLength #} p)
+  poke p x = do
+    {#set SCARD_IO_REQUEST.dwProtocol  #} p $ fromIntegral . fromEnum $ getProtocol x
+    {#set SCARD_IO_REQUEST.cbPciLength #} p $ fromIntegral $ getSize x
