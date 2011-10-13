@@ -7,7 +7,9 @@ module Internal.PCSCLite ( statusToString
                          , SCardScope (..)
                          , SCardContext
                          , SCardAction (..)
+                         , SCardCardState (..)
                          , fromCLong
+                         , fromSCardStates
                          , SCardIORequest
                          , toSCardProtocol
                          , mkSCardIORequestTO
@@ -168,3 +170,27 @@ instance Storable SCardIORequest where
   poke p x = do
     {#set SCARD_IO_REQUEST.dwProtocol  #} p $ fromIntegral . fromEnum $ getProtocol x
     {#set SCARD_IO_REQUEST.cbPciLength #} p $ fromIntegral $ getSize x
+
+
+{#
+enum define SCardCardState { SCARD_UNKNOWN as Unknown
+                           , SCARD_ABSENT  as Absent
+                           , SCARD_PRESENT as Present
+                           , SCARD_POWERED as Powered
+                           , SCARD_NEGOTIABLE as Negotiable
+                           , SCARD_SPECIFIC as Specific}
+#}
+
+instance Show SCardCardState where
+  show Unknown    = "Unknown"
+  show Absent     = "Absent"
+  show Present    = "Present"
+  show Powered    = "Powered"
+  show Negotiable = "Negotiable"
+  show Specific   = "Specific"
+
+
+fromSCardStates :: Int -> [SCardCardState]
+fromSCardStates x = let v   = [Unknown, Absent, Present, Powered, Negotiable, Specific]
+                        f k = (x .&. fromEnum k) /= 0
+                    in filter f v

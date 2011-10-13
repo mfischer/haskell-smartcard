@@ -2,6 +2,7 @@ import Internal.WinSCard ( establishContext
                          , releaseContext
                          , listReaders
                          , transmit
+                         , status
                          , connect)
 
 import Internal.PCSCLite ( SCardScope (UserScope)
@@ -19,6 +20,8 @@ tryConnection c (r:rs) = do putStrLn $"Found readers: " ++ show (r:rs)
                                                    ; case rt of
                                                           Left s -> putStrLn $show s
                                                           Right a -> putStrLn $"Answer is: " ++ (show a)
+                                                   ; rt' <- status h 200 200
+                                                   ; putStrLn $ show rt'
                                                    ; return () }
 
 main = do putStrLn "Trying to establish context ..."

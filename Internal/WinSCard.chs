@@ -7,6 +7,7 @@ module Internal.WinSCard ( establishContext
                          , connect
                          , disconnect
                          , reconnect
+                         , status
                          , beginTransaction
                          , endTransaction )
 where
@@ -18,7 +19,6 @@ import Internal.PCSCLite
 import Data.List
 import Data.List.Utils
 import Data.Bits
-import Data.ByteString hiding (filter, null, foldr, length, putStrLn)
 import Control.Monad
 
 #include <winscard.h>
@@ -57,7 +57,7 @@ listReaders c = do n <- getReaderSize_ c
                                                 rs' <- peekArray (fromIntegral n') rs
                                                 if (rt == Ok) then return $ Right $ filter (not . null) $ f rs'
                                                               else return $ Left  $ rt
-                                                                   where f  = Data.List.Utils.split "\0" . Prelude.map castCCharToChar
+                                                                   where f  = Data.List.Utils.split "\0" . map castCCharToChar
 type SCardHandle = {#type SCARDHANDLE#}
 
 combine :: [SCardProtocol] -> CULong
@@ -130,8 +130,6 @@ transmit h d lr p = allocaArray (length d) $ \sb ->
                                                res <- peekArray (fromIntegral len) rb
                                                if (rt == Ok) then return $Right res
                                                              else return $Left rt
-
-
 transmit_ = {#fun SCardTransmit as ^{ `Int'
                                     , castPtr `Ptr SCardIORequest'
                                     , castPtr `Ptr Word8'
@@ -140,3 +138,21 @@ transmit_ = {#fun SCardTransmit as ^{ `Int'
                                     , castPtr `Ptr Word8'
                                     , castPtr `Ptr CULong'
                                     } -> `SCardStatus' fromCLong#}
+
+-- | 'status' returns the current status of the reader connected to by the given SCardHandle.
+status :: SCardHandle -> Int -> Int -> IO (Either SCardStatus (String, [SCardCardState], SCardProtocol, [Word8]))
+status h lr al = allocaArray lr $ \rs ->
+                   alloca $ \s ->
+                     alloca $ \st ->
+                       alloca $ \p ->
+                         alloca $ \atr ->
+                           alloca $ \atrl -> do poke s $ fromIntegral lr
+                                                poke atrl $ fromIntegral al
+                                                rt    <- liftM fromCLong $ {#call SCardStatus as ^ #} (fromCLong h) rs s st p atr atrl
+                                                rs'   <- peekCAString rs
+                                                st'   <- peek st
+                                                p'    <- peek p
+                                                atrl' <- peek atrl
+                                                atr'  <- peekArray (fromIntegral atrl') atr
+                                                if (rt == Ok) then return $Right (rs', (fromSCardStates . fromIntegral) st', toSCardProtocol p', map fromIntegral atr')
+                                                              else return $Left  rt
