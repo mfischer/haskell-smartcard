@@ -3,6 +3,7 @@ module Internal.WinSCard ( establishContext
                          , releaseContext
                          , validateContext
                          , listReaders
+                         , listReaderGroups
                          , transmit
                          , connect
                          , disconnect
@@ -154,5 +155,16 @@ status h lr al = allocaArray lr $ \rs ->
                                                 p'    <- peek p
                                                 atrl' <- peek atrl
                                                 atr'  <- peekArray (fromIntegral atrl') atr
-                                                if (rt == Ok) then return $Right (rs', (fromSCardStates . fromIntegral) st', toSCardProtocol p', map fromIntegral atr')
-                                                              else return $Left  rt
+                                                if (rt == Ok) then return $ Right (rs', (fromSCardStates . fromIntegral) st', toSCardProtocol p', map fromIntegral atr')
+                                                              else return $ Left  rt
+
+-- | 'listReaderGroups' returns a list of currently available reader groups.
+listReaderGroups :: SCardContext -> Int -> IO (Either SCardStatus [String])
+listReaderGroups c lr = allocaArray lr $ \rb ->
+                          alloca $ \s -> do poke s $ fromIntegral lr
+                                            rt <- liftM fromCLong $ {#call SCardListReaderGroups as ^ #} c rb s
+                                            s' <- peek s
+                                            rb' <- peekArray (fromIntegral s') rb
+                                            if (rt == Ok) then return $ Right $ filter (not . null) $ f rb'
+                                                          else return $ Left  $ rt
+                                                          where f  = Data.List.Utils.split "\0" . map castCCharToChar

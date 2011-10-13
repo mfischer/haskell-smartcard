@@ -1,6 +1,7 @@
 import Internal.WinSCard ( establishContext
                          , releaseContext
                          , listReaders
+                         , listReaderGroups
                          , transmit
                          , status
                          , connect)
@@ -18,10 +19,14 @@ tryConnection c (r:rs) = do putStrLn $"Found readers: " ++ show (r:rs)
                                  Right (p, h) -> do { putStrLn $"Connected, Protocol is: " ++ show p
                                                    ; rt <- transmit h [0xff, 0x00, 0x40, 0x50, 0x04, 0x05, 0x05, 0x03, 0x01] 200 T0
                                                    ; case rt of
-                                                          Left s -> putStrLn $show s
-                                                          Right a -> putStrLn $"Answer is: " ++ (show a)
+                                                          Left s  -> putStrLn $ show s
+                                                          Right a -> putStrLn $ "Answer is: " ++ (show a)
                                                    ; rt' <- status h 200 200
-                                                   ; putStrLn $ show rt'
+                                                   ; case rt' of
+                                                          Left  s -> putStrLn $ show s
+                                                          Right a -> putStrLn $ "Queriying the status: " ++ (show rt')
+                                                   ; rt'' <- listReaderGroups c 200
+                                                   ; putStrLn $"Listing the reader groups: " ++ (show rt'')
                                                    ; return () }
 
 main = do putStrLn "Trying to establish context ..."
