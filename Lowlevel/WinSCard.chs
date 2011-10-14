@@ -2,6 +2,7 @@
 
 -- | The WinSCard module wraps the WinSCard API.
 -- It should be regarded as a low-level wrapper, though, as it still feels rather C-ish.
+-- Still missing are the getAttribute and setAttribute functions.
 module Lowlevel.WinSCard ( establishContext
                          , releaseContext
                          , validateContext
@@ -69,6 +70,7 @@ type SCardHandle = {#type SCARDHANDLE#}
 -- | Smartcard /Application Protocol Data Unit/
 type APDU = [Word8]
 
+-- | Combines the given 'SCardProtocol's into one OR'd 'CULong'
 combine :: [SCardProtocol] -> CULong
 combine = fromIntegral . foldr ((.|.) . fromEnum) 0
 
