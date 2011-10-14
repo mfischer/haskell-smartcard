@@ -2,7 +2,7 @@
 
 -- | The WinSCard module wraps the WinSCard API.
 -- It should be regarded as a low-level wrapper, though, as it still feels rather C-ish.
-module Internal.WinSCard ( establishContext
+module Lowlevel.WinSCard ( establishContext
                          , releaseContext
                          , validateContext
                          , listReaders
@@ -19,7 +19,7 @@ where
 import Foreign
 import Foreign.C
 import Foreign.C.String
-import Internal.PCSCLite
+import Lowlevel.PCSCLite
 import Data.List
 import Data.List.Utils
 import Data.Bits
@@ -91,7 +91,7 @@ reconnect h s ps a = let reconnect_ = {#call SCardReconnect as ^#}
                      in alloca $ \p ->
                            do rt <- liftM fromCLong $ reconnect_ h (fromIntegral $ fromEnum s) (combine ps) (fromIntegral $ fromEnum a) p
                               p' <- liftM toSCardProtocol $ peek p
-                              if (rt == Ok) then return $Right p' 
+                              if (rt == Ok) then return $Right p'
                                             else return $Left rt
 
 -- | The function 'disconnect' disconnects a connection, using the specified 'SCardAction'.

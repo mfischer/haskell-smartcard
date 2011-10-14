@@ -1,4 +1,4 @@
-import Internal.WinSCard ( establishContext
+import Lowlevel.WinSCard ( establishContext
                          , releaseContext
                          , listReaders
                          , listReaderGroups
@@ -6,11 +6,10 @@ import Internal.WinSCard ( establishContext
                          , status
                          , connect)
 
-import Internal.PCSCLite ( SCardScope (UserScope)
+import Lowlevel.PCSCLite ( SCardScope (UserScope)
                          , SCardStatus (..)
                          , SCardShare (..)
                          , SCardProtocol (..))
-import Numeric (showHex)
 
 tryConnection c (r:rs) = do putStrLn $"Found readers: " ++ show (r:rs)
                             x <- connect c r Shared [T0, T1]

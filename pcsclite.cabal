@@ -48,7 +48,7 @@ Cabal-version:       >=1.2
 Library
   -- Modules exported by the library.
   -- Exposed-modules:     
-  Exposed-modules:   Internal.WinSCard, Internal.PCSCLite
+  Exposed-modules:   Lowlevel.WinSCard, Lowlevel.PCSCLite
   
   -- Packages needed in order to build this package.
   Build-depends:     base, MissingH, bytestring
@@ -68,4 +68,4 @@ Executable test
   Includes:          pcsclite_patched.h winscard.h
   Extra-Libraries:   pcsclite
   Build-depends:     base
-  Other-modules:     Internal.WinSCard Internal.PCSCLite
+  Other-modules:     Lowlevel.WinSCard Lowlevel.PCSCLite

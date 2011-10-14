@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Internal.PCSCLite ( statusToString
+module Lowlevel.PCSCLite ( statusToString
                          , SCardStatus (..)
                          , SCardShare (..)
                          , SCardProtocol (..)
@@ -194,3 +194,6 @@ fromSCardStates :: Int -> [SCardCardState]
 fromSCardStates x = let v   = [Unknown, Absent, Present, Powered, Negotiable, Specific]
                         f k = (x .&. fromEnum k) /= 0
                     in filter f v
+
+
+
