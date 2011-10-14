@@ -9,10 +9,9 @@ module Lowlevel.PCSCLite ( statusToString
                          , SCardAction (..)
                          , SCardCardState (..)
                          , fromCLong
-                         , fromSCardStates
                          , SCardIORequest
                          , toSCardProtocol
-                         , mkSCardIORequestTO
+                         , mkSCardIORequestT0
                          , mkSCardIORequestT1
                          , mkSCardIORequestRaw)
 where
@@ -27,17 +26,12 @@ import Control.Applicative
 
 #include <pcsclite_patched.h>
 
-
+-- | Converts a 'SCardStatus' to the error message.
 statusToString :: SCardStatus -> String
-{--
-statusToString s = unsafePerformIO $ do r  <- {#call pcsc_stringify_error as ^#} (fromIntegral $ fromEnum s)
-                                        peekCString r
---}
-
 statusToString s = unsafePerformIO $
                    {#call pcsc_stringify_error as ^#} (fromIntegral $ fromEnum s) >>= peekCString
 
--- StatusType
+-- | Returncodes given by the PC\/SC daemon.
 {#enum define SCardStatus { SCARD_S_SUCCESS             as Ok
                           , SCARD_F_INTERNAL_ERROR      as InternalError
                           , SCARD_E_CANCELLED           as Cancelled
@@ -118,6 +112,8 @@ enum define SCardScope { SCARD_SCOPE_USER     as UserScope
 
 type SCardContext = {#type SCARDCONTEXT#}
 
+
+-- | These are the possible sharing modes for 'establishContext'
 {#
 enum define SCardShare { SCARD_SHARE_EXCLUSIVE as Exclusive
                        , SCARD_SHARE_SHARED    as Shared
@@ -132,6 +128,7 @@ enum define SCardProtocol { SCARD_PROTOCOL_T1        as T1
                           , SCARD_PROTOCOL_RAW       as Raw}
 #}
 
+-- | Converts a 'CULong' to the 'SCardProtocol'.
 toSCardProtocol :: CULong -> SCardProtocol
 toSCardProtocol = toEnum . fromIntegral
 
@@ -149,12 +146,18 @@ enum define SCardAction { SCARD_LEAVE_CARD   as LeaveCard
                         , SCARD_EJECT_CARD   as EjectCard}
 #}
 
-mkSCardIORequestTO  = SCardIORequest { getProtocol = T0
+-- | Creates a 'SCardIORequest' setup for the 'T0' protocol.
+mkSCardIORequestT0 :: SCardIORequest
+mkSCardIORequestT0  = SCardIORequest { getProtocol = T0
                                      , getSize = {#sizeof SCARD_IO_REQUEST#}}
 
+-- | Creates a 'SCardIORequest' setup for the 'T1' protocol.
+mkSCardIORequestT1 :: SCardIORequest
 mkSCardIORequestT1  = SCardIORequest { getProtocol = T1
                                      , getSize = {#sizeof SCARD_IO_REQUEST#}}
 
+-- | Creates a 'SCardIORequest' setup for the 'Raw' protocol.
+mkSCardIORequestRaw :: SCardIORequest
 mkSCardIORequestRaw = SCardIORequest { getProtocol = Raw
                                      , getSize = {#sizeof SCARD_IO_REQUEST#}}
 
@@ -188,12 +191,3 @@ instance Show SCardCardState where
   show Powered    = "Powered"
   show Negotiable = "Negotiable"
   show Specific   = "Specific"
-
-
-fromSCardStates :: Int -> [SCardCardState]
-fromSCardStates x = let v   = [Unknown, Absent, Present, Powered, Negotiable, Specific]
-                        f k = (x .&. fromEnum k) /= 0
-                    in filter f v
-
-
-
