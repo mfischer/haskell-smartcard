@@ -48,13 +48,13 @@ Cabal-version:       >=1.2
 Library
   -- Modules exported by the library.
   -- Exposed-modules:     
-  Exposed-modules:   Internal.WinSCard
+  Exposed-modules:   Internal.WinSCard, Internal.PCSCLite
   
   -- Packages needed in order to build this package.
   Build-depends:     base, MissingH, bytestring
   
   -- Modules not exported by this package.
-  Other-modules:     Internal.PCSCLite
+  --Other-modules:     Internal.PCSCLite
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Include-Dirs:      include

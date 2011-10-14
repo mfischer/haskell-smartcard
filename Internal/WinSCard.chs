@@ -1,4 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
+
+-- | The WinSCard module wraps the WinSCard API.
+-- It should be regarded as a low-level wrapper, though, as it still feels rather C-ish.
 module Internal.WinSCard ( establishContext
                          , releaseContext
                          , validateContext
@@ -32,11 +35,11 @@ establishContext s = alloca $ \ctx_ptr ->
                            if rt == Ok then return $Right ctx
                                        else return $Left rt
 
--- | the 'releaseContext' function needs to be invoked last in the program, to cleanup.
+-- | The 'releaseContext' function needs to be invoked last in the program, to cleanup.
 releaseContext :: SCardContext -> IO (SCardStatus)
 releaseContext c = liftM fromCLong $ {#call SCardReleaseContext as ^#} c
 
--- | Given a context 'validateContext' will return True if the given context is still valid.
+-- | Given a context, 'validateContext' will return True if the given context is still valid.
 validateContext :: SCardContext -> IO (Bool)
 validateContext c = do rt <- liftM fromCLong $ {#call SCardIsValidContext as ^#} c
                        return $ rt == Ok
@@ -48,7 +51,7 @@ getReaderSize_ c = alloca $ \s -> do listReaders_ c nullPtr nullPtr s
                                      s' <- peek s 
                                      return $fromIntegral s'
 
--- | 'listReaders' lists the connected readers, or gives an error.
+-- | Given a context, 'listReaders' lists the connected readers, or gives an error.
 listReaders :: SCardContext -> IO (Either SCardStatus [String])
 listReaders c = do n <- getReaderSize_ c
                    allocaArray n $ \rs ->
@@ -64,7 +67,9 @@ type SCardHandle = {#type SCARDHANDLE#}
 combine :: [SCardProtocol] -> CULong
 combine = fromIntegral . foldr ((.|.) . fromEnum) 0
 
--- | 'connect' establishes a connection to the friendly name of the reader specified. The first connection will power up and perform a reset on the card.
+-- | Given a context, the function 'connect' establishes a connection to the reader specified as a 'String'.
+-- A 'SCardShare' describing the type of connection can be given as well as a list of possible 'SCardProtocol's.
+-- The first connection will power up and perform a reset on the card.
 connect :: SCardContext -> String -> SCardShare -> [SCardProtocol] -> IO (Either SCardStatus (SCardProtocol, SCardHandle))
 connect c r s ps = let connect_ = {#call SCardConnect as ^#}
                    in alloca $ \p ->
@@ -77,7 +82,10 @@ connect c r s ps = let connect_ = {#call SCardConnect as ^#}
                                              else return $Left  rt
 
 
--- | 'reconnect' reconnects a lost connection, using a SCardAction.
+-- | This function reestablishes a connection to a reader that was previously connected to using 'connect'.
+-- In a multi application environment it is possible for an application to reset the card in 'Shared' mode.
+-- When this occurs any other application trying to access certain commands will be returned the value 'CardReset'.
+-- When this occurs 'reconnect' must be called in order to acknowledge that the card was reset and allow it to change it's state accordingly.
 reconnect:: SCardHandle -> SCardShare -> [SCardProtocol] -> SCardAction-> IO (Either SCardStatus SCardProtocol)
 reconnect h s ps a = let reconnect_ = {#call SCardReconnect as ^#}
                      in alloca $ \p ->
@@ -86,39 +94,49 @@ reconnect h s ps a = let reconnect_ = {#call SCardReconnect as ^#}
                               if (rt == Ok) then return $Right p' 
                                             else return $Left rt
 
--- | 'disconnect' disconnects a connection, using the specified SCardAction
+-- | The function 'disconnect' disconnects a connection, using the specified 'SCardAction'.
 disconnect :: SCardHandle -> SCardAction -> IO (SCardStatus)
 disconnect h a = let disconnect_ = {#call SCardDisconnect as ^ #}
                  in  liftM fromCLong $ disconnect_ h (fromIntegral $ fromEnum a)
 
--- |
+-- | The function 'beginTransaction' establishes a temporary exclusive access mode for doing a series of commands or transaction.
+-- You might want to use this when you are selecting a few files and then writing a large file so you can make sure
+-- that another application will not change the current file.
+-- If another application has a lock on this reader or this application is in 'Exclusive' there will be no action taken.
 beginTransaction :: SCardHandle -> IO (SCardStatus)
 beginTransaction h = liftM fromCLong $ {#call SCardBeginTransaction as ^#} h
 
--- |
+-- | The function 'endTransaction' ends a previously begun transaction.
+-- The calling application must be the owner of the previously begun transaction or an error will occur.
+-- 'a' can have the following values:
+-- 'LeaveCard', 'ResetCard', 'UnpowerCard', 'EjectCard'
+-- The disposition action is not currently used in this release. 
 endTransaction :: SCardHandle -> SCardAction -> IO (SCardStatus)
 endTransaction h a = let end_ = {#call SCardDisconnect as ^ #}
                      in  liftM fromCLong $ end_ h (fromIntegral $ fromEnum a)
 
--- |
+-- | The function cancels all pending blocking requests on the 'getStatusChange' function.
 cancel :: SCardHandle -> IO (SCardStatus)
 cancel h = liftM fromCLong $ {#call SCardCancel as ^ #} h
 
-{--
-control :: SCardHandle -> [Word8] -> Int -> Int -> IO (Either SCardStatus String)
-control h s op len = let control_ = {#call SCardControl as ^ #}
-                     in useAsCStringLen (pack s) $ \(sb,l) -> allocaArray len $ \r ->
-                          alloca $ \l' ->
-                            do rt   <- liftM fromCLong $ control_ h (fromIntegral op) (castPtr sb) (fromIntegral l) r len l'
-                               len' <- peek l'
-                               res  <- peekArray len'
-                               if (rt == Ok) then return $Right res
-                                             else return $Left rt
---}
+-- | 'control' sends a command directly to the IFD Handler to be processed by the reader.
+control :: SCardHandle -> Int -> [Word8] -> Int -> IO (Either SCardStatus [Word8])
+control h op cmd lr = let f  = fromIntegral . length
+                          l  = length
+                          cp = castPtr
+                          fi = fromIntegral
+                      in allocaArray (l cmd) $ \sb ->
+                           allocaArray lr $ \rb ->
+                             alloca $ \lr' ->
+                               do rt <- liftM fromCLong $ {#call SCardControl as ^ #} h (fi op) (cp (sb :: Ptr Word8)) (f cmd) (cp (rb :: Ptr Word8)) (fi lr) lr'
+                                  lr'' <- peek lr'
+                                  res  <- peekArray (fromIntegral lr'') (castPtr rb)
+                                  if (rt == Ok) then return $Right (res :: [Word8])
+                                                else return $Left rt
 
 
-
--- | 'transmit' sends an APDU to the smartcard / RFID tag connected to by 'connect'
+-- | The function 'transmit' sends an APDU given as list of 'Word8' to the smartcard / RFID tag connected to by 'connect'.
+-- The maximum expected length for the given request is given as lr and the protocol to be used as p.
 transmit :: SCardHandle -> [Word8] -> Int -> SCardProtocol -> IO (Either SCardStatus [Word8])
 transmit h d lr p = allocaArray (length d) $ \sb ->
                       allocaArray lr $ \rb ->
@@ -140,7 +158,9 @@ transmit_ = {#fun SCardTransmit as ^{ `Int'
                                     , castPtr `Ptr CULong'
                                     } -> `SCardStatus' fromCLong#}
 
--- | 'status' returns the current status of the reader connected to by the given SCardHandle.
+-- | Given a handle and the lengths for the send and receive buffers this function returns the current status of the reader connected to.
+-- It's friendly name will be returned as a 'String'.
+-- The current state is returned as a List of 'SCardCardState', and the Protocol as 'SCardProtocol'.
 status :: SCardHandle -> Int -> Int -> IO (Either SCardStatus (String, [SCardCardState], SCardProtocol, [Word8]))
 status h lr al = allocaArray lr $ \rs ->
                    alloca $ \s ->
