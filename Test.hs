@@ -9,7 +9,10 @@ import Lowlevel.WinSCard ( establishContext
 import Lowlevel.PCSCLite ( SCardScope (UserScope)
                          , SCardStatus (..)
                          , SCardShare (..)
+                         , SCardContext (..)
                          , SCardProtocol (..))
+
+import Control.Monad
 
 tryConnection c (r:rs) = do putStrLn $"Found readers: " ++ show (r:rs)
                             x <- connect c r Shared [T0, T1]
@@ -28,17 +31,10 @@ tryConnection c (r:rs) = do putStrLn $"Found readers: " ++ show (r:rs)
                                                    ; putStrLn $"Listing the reader groups: " ++ (show rt'')
                                                    ; return () }
 
-main = do putStrLn "Trying to establish context ..."
-          ret <- establishContext UserScope
-          case ret of
-               (Left s)     -> do putStrLn $show s
-               (Right ctx') -> do { putStrLn "Trying to release the context ..."
-                                 ; rs  <- listReaders ctx'
-                                 ; case rs of
-                                        Right rs' ->  tryConnection ctx' rs'
-                                        Left  err ->  putStrLn $ show err
-                                 ; res <- releaseContext ctx'
-                                 ; return ()
-                                 }
-          return ()
+withContext :: SCardScope -> (SCardContext -> IO a) -> IO (Either String SCardStatus)
+withContext s f = establishContext s >>= \r -> either (return . Left . show) (\c -> f c >> (liftM Right $ releaseContext c)) r
 
+main =  withContext UserScope $ \c ->
+          do rs <- listReaders c
+             either (putStrLn . show) (tryConnection c) rs
+             return ()
