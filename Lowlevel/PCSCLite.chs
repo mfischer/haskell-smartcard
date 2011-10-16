@@ -1,7 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Lowlevel.PCSCLite ( statusToString
-                         , SCardStatus (..)
+module Lowlevel.PCSCLite ( SCardStatus (..)
                          , SCardShare (..)
                          , SCardProtocol (..)
                          , SCardScope (..)
