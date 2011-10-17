@@ -16,6 +16,7 @@ import Data.Tuple (swap)
 #include <wintypes.h>
 #include <to_attr.h>
 
+-- | Represents the diferent classes of attribute set/get requests.
 {#enum define SCardAttrClass { SCARD_CLASS_VENDOR_INFO    as SCardAttrVendorInfo
                              , SCARD_CLASS_COMMUNICATIONS as SCardAttrCommunications
                              , SCARD_CLASS_PROTOCOL       as SCardAttrProtocol
@@ -28,7 +29,7 @@ import Data.Tuple (swap)
                              , SCARD_CLASS_SYSTEM         as SCardAttrSystem}
 #}
 
-
+-- | Creates the values needed by the IFD handler from the given 'SCardAttrClass' and the 'AttrTag'.
 toSCardAttrValue :: SCardAttrClass -> AttrTag -> CULong
 toSCardAttrValue c t = let c' = fromIntegral $ fromEnum c
                            t' = fromIntegral $ fromEnum t

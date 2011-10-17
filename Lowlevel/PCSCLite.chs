@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
-
+-- | This is purely for internal usage at the moment and still under heavy work.
 module Lowlevel.PCSCLite ( SCardStatus (..)
                          , SCardShare (..)
                          , SCardProtocol (..)

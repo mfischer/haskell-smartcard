@@ -2,7 +2,7 @@
 
 -- | The WinSCard module wraps the WinSCard API.
 -- It should be regarded as a low-level wrapper, though, as it still feels rather C-ish.
--- Still missing are the setAttribute function.
+-- Still missing is the getStatusChange function.
 module Lowlevel.WinSCard ( establishContext
                          , releaseContext
                          , validateContext
@@ -16,6 +16,7 @@ module Lowlevel.WinSCard ( establishContext
                          , beginTransaction
                          , endTransaction
                          , getAttribute
+                         , setAttribute
                          , APDU )
 where
 
@@ -198,8 +199,8 @@ status h lr al = allocaArray lr $ \rs ->
 listReaderGroups :: SCardContext -> Int -> IO (Either SCardStatus [String])
 listReaderGroups c lr = allocaArray lr $ \rb ->
                           alloca $ \s -> do poke s $ fromIntegral lr
-                                            rt <- liftM fromCLong $ {#call SCardListReaderGroups as ^ #} c rb s
-                                            s' <- peek s
+                                            rt  <- liftM fromCLong $ {#call SCardListReaderGroups as ^ #} c rb s
+                                            s'  <- peek s
                                             rb' <- peekArray (fromIntegral s') rb
                                             if (rt == Ok) then return $ Right $ filter (not . null) $ f rb'
                                                           else return $ Left  rt
@@ -212,13 +213,21 @@ fromSCardStates x = let v   = [Unknown, Absent, Present, Powered, Negotiable, Sp
 
 type SCardAttribute   = [Word8]
 
--- | Get an attribute from the IFD Handler. The possible attributes are represented by 'AttrTag'.
+-- | Gets an attribute from the IFD Handler. The possible attributes are represented by the 'AttrTag' datatype.
 getAttribute :: SCardHandle -> AttrRequest -> Int -> IO (Either SCardStatus SCardAttribute)
 getAttribute h (AttrRequest r) la = allocaArray la $ \a ->
                                       alloca $ \la' -> do
                                         poke la' la
                                         rt   <- liftM fromCLong $ {#call SCardGetAttrib as ^#} h r (castPtr a) (castPtr la')
-                                        la'' <- peek la'
-                                        a'   <- peekArray (fromIntegral la'') a
+                                        la   <- peek la'
+                                        a'   <- peekArray (fromIntegral la) a
                                         if (rt == Ok) then return $ Right a'
                                                       else return $ Left  rt
+
+-- | Sets an attribute of the IFD Handler. The list of attributes you can set is dependent on the IFD Handler you are using.
+setAttribute :: SCardHandle -> AttrRequest -> SCardAttribute -> IO (SCardStatus)
+setAttribute h (AttrRequest r) s = let ls = fromIntegral $ length s
+                                       cp = castPtr
+                                   in allocaArray ls $ \s' -> do
+                                        pokeArray s' s
+                                        liftM fromCLong $ {#call SCardSetAttrib as ^#} h (fromIntegral r) (cp s') (fromIntegral ls)
