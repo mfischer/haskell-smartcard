@@ -1,6 +1,9 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Lowlevel.Reader
+module Lowlevel.Reader ( AttrTag (..)
+                       , AttrRequest
+                       , mkRequest
+                       )
 
 where
 
@@ -22,26 +25,27 @@ to_attr (ULONG class, ULONG tag)
 #endc
 
 
-{#enum define SCardAttributeClass { SCARD_CLASS_VENDOR_INFO    as SCardAttrVendorInfo
-                                  , SCARD_CLASS_COMMUNICATIONS as SCardAttrCommunications
-                                  , SCARD_CLASS_PROTOCOL       as SCardAttrProtocol
-                                  , SCARD_CLASS_POWER_MGMT     as SCardAttrPowerManagement
-                                  , SCARD_CLASS_SECURITY       as SCardAttrSecurity
-                                  , SCARD_CLASS_MECHANICAL     as SCardAttrMechanical
-                                  , SCARD_CLASS_VENDOR_DEFINED as SCardAttrVendorDefined
-                                  , SCARD_CLASS_IFD_PROTOCOL   as SCardAttrIFDProtocol
-                                  , SCARD_CLASS_ICC_STATE      as SCardAttrICCState 
-                                  , SCARD_CLASS_SYSTEM         as SCardAttrSystem}
+{#enum define SCardAttrClass { SCARD_CLASS_VENDOR_INFO    as SCardAttrVendorInfo
+                             , SCARD_CLASS_COMMUNICATIONS as SCardAttrCommunications
+                             , SCARD_CLASS_PROTOCOL       as SCardAttrProtocol
+                             , SCARD_CLASS_POWER_MGMT     as SCardAttrPowerManagement
+                             , SCARD_CLASS_SECURITY       as SCardAttrSecurity
+                             , SCARD_CLASS_MECHANICAL     as SCardAttrMechanical
+                             , SCARD_CLASS_VENDOR_DEFINED as SCardAttrVendorDefined
+                             , SCARD_CLASS_IFD_PROTOCOL   as SCardAttrIFDProtocol
+                             , SCARD_CLASS_ICC_STATE      as SCardAttrICCState
+                             , SCARD_CLASS_SYSTEM         as SCardAttrSystem}
 #}
 
 
-toSCardAttrValue :: SCardAttributeClass -> AttrTag -> CULong
+toSCardAttrValue :: SCardAttrClass -> AttrTag -> CULong
 toSCardAttrValue c t = let c' = fromIntegral $ fromEnum c
                            t' = fromIntegral $ fromEnum t
                        in unsafePerformIO $ {#call to_attr#} c' t'
 
 
 
+-- | The possible values that can be queried from the reader. Note that not all of them are necessarily implemented by your reader.
 data AttrTag = VendorName
              | IFDType
              | IFDSerialNo
@@ -130,7 +134,59 @@ pairs = [ (VendorName            , 0x0100)
         , (SuppressT1IFSRequest  , 0x0007)
         ]
 
+reqlu = [ (VendorName            , SCardAttrVendorInfo)
+        , (IFDType               , SCardAttrVendorInfo)
+        , (IFDSerialNo           , SCardAttrVendorInfo)
+        , (ChannelID             , SCardAttrCommunications)
+        , (AsyncProtocolTypes    , SCardAttrProtocol)
+        , (DefaultClock          , SCardAttrProtocol)
+        , (MaxClock              , SCardAttrProtocol)
+        , (DefaultDataRate       , SCardAttrProtocol)
+        , (MaxDataRate           , SCardAttrProtocol)
+        , (MaxIFSD               , SCardAttrProtocol)
+        , (SyncProtocolTypes     , SCardAttrProtocol)
+        , (PowerManagement       , SCardAttrPowerManagement)
+        , (UserToCardAuthDevice  , SCardAttrSecurity)
+        , (UserToCardInputDevice , SCardAttrSecurity)
+        , (Characteristics       , SCardAttrMechanical)
+        , (CurrentProtocol       , SCardAttrIFDProtocol)
+        , (CurrentClock          , SCardAttrIFDProtocol)
+        , (CurrentF              , SCardAttrIFDProtocol)
+        , (CurrentD              , SCardAttrIFDProtocol)
+        , (CurrentW              , SCardAttrIFDProtocol)
+        , (CurrentIFSC           , SCardAttrIFDProtocol)
+        , (CurrentIFSD           , SCardAttrIFDProtocol)
+        , (CurrentBWT            , SCardAttrIFDProtocol)
+        , (CurrentCWT            , SCardAttrIFDProtocol)
+        , (CurrentEBCEncoding    , SCardAttrIFDProtocol)
+        , (CurrentExtendedBWT    , SCardAttrIFDProtocol)
+        , (ICCPresence           , SCardAttrICCState)
+        , (ICCInterfaceStatus    , SCardAttrICCState)
+        , (CurrentIOState        , SCardAttrICCState)
+        , (ATRString             , SCardAttrICCState)
+        , (ICCTypePerAtr         , SCardAttrICCState)
+        , (ESCReset              , SCardAttrVendorDefined)
+        , (ESCCancel             , SCardAttrVendorDefined)
+        , (ESCAuthRequest        , SCardAttrVendorDefined)
+        , (ESCMaxInput           , SCardAttrVendorDefined)
+        , (DeviceUnit            , SCardAttrSystem)
+        , (DeviceInUse           , SCardAttrSystem)
+        , (DeviceFriendlyNameA   , SCardAttrSystem)
+        , (DeviceSystemNameA     , SCardAttrSystem)
+        , (DeviceFriendlyNameW   , SCardAttrSystem)
+        , (DeviceSystemNameW     , SCardAttrSystem)
+        , (SuppressT1IFSRequest  , SCardAttrSystem)
+        ]
+
 instance Enum AttrTag where
   fromEnum x = fromJust $ lookup x pairs
   toEnum   x = let pairs' = map swap pairs
                in  fromJust $ lookup x pairs'
+
+-- | Generates a request that can be used to query the attributes of the reader with 'getAttribute'.
+data AttrRequest = AttrRequest CULong
+
+-- | Given the 'AttrTag' you're looking for it will create a request, that can be used with 'getAttribute'.
+mkRequest :: AttrTag -> AttrRequest
+mkRequest t = let v = fromJust $ lookup t reqlu
+              in  AttrRequest $ toSCardAttrValue v t
