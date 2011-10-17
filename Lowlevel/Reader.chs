@@ -1,7 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Lowlevel.Reader ( AttrTag (..)
-                       , AttrRequest
+                       , AttrRequest (..)
                        , mkRequest
                        )
 
@@ -14,16 +14,7 @@ import Data.Tuple (swap)
 
 #include <reader.h>
 #include <wintypes.h>
-
-#c
-
-ULONG
-to_attr (ULONG class, ULONG tag)
-{
-	return SCARD_ATTR_VALUE (class, tag);
-}
-#endc
-
+#include <to_attr.h>
 
 {#enum define SCardAttrClass { SCARD_CLASS_VENDOR_INFO    as SCardAttrVendorInfo
                              , SCARD_CLASS_COMMUNICATIONS as SCardAttrCommunications
@@ -41,7 +32,7 @@ to_attr (ULONG class, ULONG tag)
 toSCardAttrValue :: SCardAttrClass -> AttrTag -> CULong
 toSCardAttrValue c t = let c' = fromIntegral $ fromEnum c
                            t' = fromIntegral $ fromEnum t
-                       in unsafePerformIO $ {#call to_attr#} c' t'
+                       in unsafePerformIO $ {#call to_attr as ^#} c' t'
 
 
 

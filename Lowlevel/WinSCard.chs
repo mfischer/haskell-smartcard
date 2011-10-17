@@ -2,7 +2,7 @@
 
 -- | The WinSCard module wraps the WinSCard API.
 -- It should be regarded as a low-level wrapper, though, as it still feels rather C-ish.
--- Still missing are the getAttribute and setAttribute functions.
+-- Still missing are the setAttribute function.
 module Lowlevel.WinSCard ( establishContext
                          , releaseContext
                          , validateContext
@@ -15,6 +15,7 @@ module Lowlevel.WinSCard ( establishContext
                          , status
                          , beginTransaction
                          , endTransaction
+                         , getAttribute
                          , APDU )
 where
 
@@ -26,6 +27,7 @@ import Data.List
 import Data.List.Utils
 import Data.Bits
 import Control.Monad
+import Lowlevel.Reader (mkRequest, AttrTag, AttrRequest (..))
 
 #include <winscard.h>
 
@@ -200,10 +202,23 @@ listReaderGroups c lr = allocaArray lr $ \rb ->
                                             s' <- peek s
                                             rb' <- peekArray (fromIntegral s') rb
                                             if (rt == Ok) then return $ Right $ filter (not . null) $ f rb'
-                                                          else return $ Left  $ rt
+                                                          else return $ Left  rt
                                                           where f  = Data.List.Utils.split "\0" . map castCCharToChar
 
 fromSCardStates :: Int -> [SCardCardState]
 fromSCardStates x = let v   = [Unknown, Absent, Present, Powered, Negotiable, Specific]
                         f k = (x .&. fromEnum k) /= 0
                     in filter f v
+
+type SCardAttribute   = [Word8]
+
+-- | Get an attribute from the IFD Handler. The possible attributes are represented by 'AttrTag'.
+getAttribute :: SCardHandle -> AttrRequest -> Int -> IO (Either SCardStatus SCardAttribute)
+getAttribute h (AttrRequest r) la = allocaArray la $ \a ->
+                                      alloca $ \la' -> do
+                                        poke la' la
+                                        rt   <- liftM fromCLong $ {#call SCardGetAttrib as ^#} h r (castPtr a) (castPtr la')
+                                        la'' <- peek la'
+                                        a'   <- peekArray (fromIntegral la'') a
+                                        if (rt == Ok) then return $ Right a'
+                                                      else return $ Left  rt

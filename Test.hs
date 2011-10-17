@@ -4,6 +4,7 @@ import Lowlevel.WinSCard ( establishContext
                          , listReaderGroups
                          , transmit
                          , status
+                         , getAttribute
                          , connect)
 
 import Lowlevel.PCSCLite ( SCardScope (UserScope)
@@ -11,6 +12,10 @@ import Lowlevel.PCSCLite ( SCardScope (UserScope)
                          , SCardShare (..)
                          , SCardContext (..)
                          , SCardProtocol (..))
+
+import Lowlevel.Reader   ( AttrTag (..)
+                         , mkRequest
+                         )
 
 import Control.Monad
 
@@ -22,9 +27,11 @@ tryConnection c r'@(r:rs) = do printShow r' "Found readers: "
                                      rt <- transmit h [0xff, 0x00, 0x40, 0x50, 0x04, 0x05, 0x05, 0x03, 0x01] 200 T0
                                      either print (`printShow` "Answer is: ") rt
                                      rt' <- status h 200 200
-                                     printShow rt' "Querying the status: "
+                                     either print (`printShow` "Queriying the status: ") rt'
                                      rt'' <- listReaderGroups c 200
-                                     printShow rt'' "Listing the reader groups: "
+                                     either print (`printShow` "Listing the reader groups: ") rt''
+                                     rt''' <- getAttribute h (mkRequest VendorName) 200
+                                     either print (`printShow` "Got attribute \"VendorName\"=") rt'''
                                      return ()
 
 
