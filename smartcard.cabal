@@ -48,7 +48,7 @@ Cabal-version:       >=1.2
 Library
   -- Modules exported by the library.
   -- Exposed-modules:     
-  Exposed-modules:   Lowlevel.WinSCard, Lowlevel.PCSCLite
+  Exposed-modules:   Lowlevel.WinSCard, Lowlevel.PCSCLite, Lowlevel.Reader
   
   -- Packages needed in order to build this package.
   Build-depends:     base, MissingH, bytestring
@@ -58,7 +58,7 @@ Library
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Include-Dirs:      include
-  Includes:          pcsclite_patched.h winscard.h
+  Includes:          pcsclite_patched.h winscard.h reader.h
   Build-tools:       c2hs        
   Extra-Libraries:   pcsclite
   
