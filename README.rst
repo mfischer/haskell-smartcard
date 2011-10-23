@@ -40,7 +40,6 @@ Known problems
 
 * The interface does still feel very C-ish, so a lot of work has to be done there.
   Moreover it would be nice to have a better representation of the *APDUs*.
-* Add bindings for the *SCardGetAttr* and *SCardSetAttr*.
 
 License
 ~~~~~~~~
