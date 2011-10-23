@@ -1,18 +1,18 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 -- | This is purely for internal usage at the moment and still under heavy work.
-module Lowlevel.PCSCLite ( SCardStatus (..)
-                         , SCardShare (..)
-                         , SCardProtocol (..)
-                         , SCardScope (..)
-                         , SCardContext
-                         , SCardAction (..)
-                         , SCardCardState (..)
-                         , fromCLong
-                         , SCardIORequest
-                         , toSCardProtocol
-                         , mkSCardIORequestT0
-                         , mkSCardIORequestT1
-                         , mkSCardIORequestRaw)
+module System.Smartcard.Lowlevel.PCSCLite ( SCardStatus (..)
+                                         , SCardShare (..)
+                                         , SCardProtocol (..)
+                                         , SCardScope (..)
+                                         , SCardContext
+                                         , SCardAction (..)
+                                         , SCardCardState (..)
+                                         , fromCLong
+                                         , SCardIORequest
+                                         , toSCardProtocol
+                                         , mkSCardIORequestT0
+                                         , mkSCardIORequestT1
+                                         , mkSCardIORequestRaw)
 where
 
 

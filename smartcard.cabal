@@ -1,5 +1,5 @@
 Name:                smartcard
-Version:             0.1.1
+Version:             0.1.2
 
 Synopsis:            Haskell bindings for libpcsclite.
 Description:         This package is supposed to bundle all kind of stuff, that's useful when communicating with rfid tags and smartcards.
@@ -19,7 +19,9 @@ Source-repository head
   Location:          git@github.com:mfischer/haskell-smartcard.git
 
 Library
-  Exposed-modules:   Lowlevel.WinSCard, Lowlevel.PCSCLite, Lowlevel.Reader
+  Exposed-modules:   System.Smartcard.Lowlevel.WinSCard,
+                     System.Smartcard.Lowlevel.PCSCLite,
+                     System.Smartcard.Lowlevel.Reader
   Build-depends:     base >= 3 && <= 4.3.1.0, MissingH, bytestring
   -- Other-modules:
   Include-Dirs:      include
@@ -33,5 +35,7 @@ Executable test
   Includes:          pcsclite_patched.h winscard.h
   Extra-Libraries:   pcsclite
   Build-depends:     base
-  Other-modules:     Lowlevel.WinSCard Lowlevel.PCSCLite Lowlevel.Reader
+  Other-modules:     System.Smartcard.Lowlevel.WinSCard,
+                     System.Smartcard.Lowlevel.PCSCLite,
+                     System.Smartcard.Lowlevel.Reader
   C-Sources:         cbits/to_attr.c

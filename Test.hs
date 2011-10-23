@@ -1,21 +1,21 @@
-import Lowlevel.WinSCard ( establishContext
-                         , releaseContext
-                         , listReaders
-                         , listReaderGroups
-                         , transmit
-                         , status
-                         , getAttribute
-                         , connect)
+import System.Smartcard.Lowlevel.WinSCard ( establishContext
+                                           , releaseContext
+                                           , listReaders
+                                           , listReaderGroups
+                                           , transmit
+                                           , status
+                                           , getAttribute
+                                           , connect)
 
-import Lowlevel.PCSCLite ( SCardScope (UserScope)
-                         , SCardStatus (..)
-                         , SCardShare (..)
-                         , SCardContext (..)
-                         , SCardProtocol (..))
+import System.Smartcard.Lowlevel.PCSCLite ( SCardScope (UserScope)
+                                          , SCardStatus (..)
+                                          , SCardShare (..)
+                                          , SCardContext (..)
+                                          , SCardProtocol (..))
 
-import Lowlevel.Reader   ( AttrTag (..)
-                         , mkRequest
-                         )
+import System.Smartcard.Lowlevel.Reader   ( AttrTag (..)
+                                          , mkRequest
+                                          )
 
 import Control.Monad
 

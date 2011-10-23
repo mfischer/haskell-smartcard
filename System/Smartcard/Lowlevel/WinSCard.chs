@@ -3,32 +3,32 @@
 -- | The WinSCard module wraps the WinSCard API.
 -- It should be regarded as a low-level wrapper, though, as it still feels rather C-ish.
 -- Still missing is the getStatusChange function.
-module Lowlevel.WinSCard ( establishContext
-                         , releaseContext
-                         , validateContext
-                         , listReaders
-                         , listReaderGroups
-                         , transmit
-                         , connect
-                         , disconnect
-                         , reconnect
-                         , status
-                         , beginTransaction
-                         , endTransaction
-                         , getAttribute
-                         , setAttribute
-                         , APDU )
+module System.Smartcard.Lowlevel.WinSCard ( establishContext
+                                          , releaseContext
+                                          , validateContext
+                                          , listReaders
+                                          , listReaderGroups
+                                          , transmit
+                                          , connect
+                                          , disconnect
+                                          , reconnect
+                                          , status
+                                          , beginTransaction
+                                          , endTransaction
+                                          , getAttribute
+                                          , setAttribute
+                                          , APDU )
 where
 
 import Foreign
 import Foreign.C
 import Foreign.C.String
-import Lowlevel.PCSCLite
 import Data.List
 import Data.List.Utils
 import Data.Bits
 import Control.Monad
-import Lowlevel.Reader (mkRequest, AttrTag, AttrRequest (..))
+import System.Smartcard.Lowlevel.Reader (mkRequest, AttrTag, AttrRequest (..))
+import System.Smartcard.Lowlevel.PCSCLite
 
 #include <winscard.h>
 

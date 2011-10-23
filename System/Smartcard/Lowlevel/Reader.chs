@@ -1,9 +1,9 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Lowlevel.Reader ( AttrTag (..)
-                       , AttrRequest (..)
-                       , mkRequest
-                       )
+module System.Smartcard.Lowlevel.Reader ( AttrTag (..)
+                                        , AttrRequest (..)
+                                        , mkRequest
+                                        )
 
 where
 
